@@ -2,36 +2,30 @@
 
 Connecting tourists and locals through small-group authentic experiences with vibe filters, introvert-friendly capacity caps, and interactive map integrations.
 
-## Backend Setup & Execution
+## How to Run the Website
 
-The backend is built using Python, FastAPI, and SQLite.
+You need to run two things: the **Backend** and the **Frontend**, in two separate terminal windows.
 
-### Prerequisites
-
-Make sure you have Python 3.8+ installed on your system.
-
-### 1. Install Dependencies
-
-Navigate to the `server` directory and install the required dependencies:
-
+### Step 1: Start the Backend (Terminal 1)
+Open a terminal and run these commands to start the backend on port `8000`:
 ```bash
 cd server
 pip install -r requirements.txt
-```
-
-### 2. Run the Server
-
-Start the FastAPI development server using Uvicorn:
-
-```bash
-cd server
 uvicorn main:app --reload
 ```
 
-By default, the server runs on `http://127.0.0.1:8000`.
+### Step 2: Start the Frontend (Terminal 2)
+Open a **new** terminal in the main folder (`Block_Wise`) and run this command to start the frontend on port `8080` (this must be different from 8000!):
+```bash
+python -m http.server 8080
+```
 
-### 3. API Documentation
+### Step 3: Open the Website
+Click here or type this into your browser: 
+👉 [http://127.0.0.1:8080/blockwise-v2_1.html](http://127.0.0.1:8080/blockwise-v2_1.html)
 
-FastAPI automatically generates interactive Swagger API documentation. You can access it at:
-* **Swagger UI**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-* **ReDoc**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
+---
+
+### Backend API Documentation
+If you ever need to look at the backend API documentation, you can view it here while the backend is running:
+* [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
