@@ -2032,7 +2032,45 @@
             box.innerHTML = `<div class="toast">${esc(msg)}</div>`;
             clearTimeout(tt); tt = setTimeout(() => box.innerHTML = "", 2600);
         }
-        function go(v) { view = v; menuOpen = false; searchOpen = false; render(); window.scrollTo(0, 0); }
+        /* ---------- routing ----------
+           Every view gets its own URL hash, so the browser back and forward
+           buttons work, links can be opened in a new tab, and a refresh lands
+           you back where you were instead of at the feed. Hash routing rather
+           than pushState because this has to run from file:// too. */
+        function toHash(v) {
+            switch (v.name) {
+                case "tag": return "#/tag/" + encodeURIComponent(v.tag);
+                case "outing": return "#/outing/" + v.id;
+                case "place": return "#/place/" + v.id;
+                case "search": return "#/search/" + encodeURIComponent(v.q || "");
+                default: return "#/" + v.name;
+            }
+        }
+        function fromHash(h) {
+            const bits = String(h || "").replace(/^#\/?/, "").split("/").filter(Boolean);
+            const a = bits[0], b = bits[1];
+            if (a === "tag") return { name: "tag", tag: b ? decodeURIComponent(b) : "matchacafe" };
+            if (a === "outing" && outing(b)) return { name: "outing", id: b };
+            if (a === "place" && place(b)) return { name: "place", id: b };
+            if (a === "search") return { name: "search", q: b ? decodeURIComponent(b) : "" };
+            if (["create", "hosting", "account", "interests"].includes(a)) return { name: a };
+            return { name: "tag", tag: "matchacafe" };
+        }
+        const hrefFor = v => toHash(v);
+
+        function go(v) {
+            menuOpen = false; searchOpen = false;
+            const h = toHash(v);
+            if (location.hash === h) { view = v; render(); window.scrollTo(0, 0); return; }
+            location.hash = h;                 /* hashchange below does the render */
+        }
+
+        window.addEventListener("hashchange", () => {
+            view = fromHash(location.hash);
+            menuOpen = false; searchOpen = false; threadOpen = null;
+            render();
+            window.scrollTo(0, 0);
+        });
 
         const ICON = {
             glass: `<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"
@@ -2115,10 +2153,10 @@
     <div class="btm">
       <div class="wm">BlockWise<small>Your Block, New Faces</small></div>
       <nav><b>NAVIGATE</b>
-        <a href="#" data-go='{"name":"tag","tag":"all"}'>ABOUT</a>
-        <a href="#" data-go='{"name":"create"}'>CONTACT</a>
-        <a href="#" data-go='{"name":"tag","tag":"matchacafe"}'>COMMUNITY</a>
-        <a href="#" data-go='{"name":"interests"}'>INTERESTS</a>
+        <a href="${hrefFor({ "name": "tag", "tag": "all" })}" data-go='{"name":"tag","tag":"all"}'>ABOUT</a>
+        <a href="${hrefFor({ "name": "create" })}" data-go='{"name":"create"}'>CONTACT</a>
+        <a href="${hrefFor({ "name": "tag", "tag": "matchacafe" })}" data-go='{"name":"tag","tag":"matchacafe"}'>COMMUNITY</a>
+        <a href="${hrefFor({ "name": "interests" })}" data-go='{"name":"interests"}'>INTERESTS</a>
       </nav>
       <nav><b>RESOURCES</b>
         <a href="#">FAQ</a>
@@ -2274,7 +2312,7 @@
   ${header}
 
   ${list.map(band).join("") || `<div class="sheet"><p class="sub">Nothing here yet.
-    <a href="#" data-go='{"name":"create"}'>Host the first one.</a></p></div>`}
+    <a href="${hrefFor({ "name": "create" })}" data-go='{"name":"create"}'>Host the first one.</a></p></div>`}
 
   ${spots.length ? `<div class="sheet">
     <h3 class="sec">Places this tag has been</h3>
@@ -2360,7 +2398,7 @@
             return `
   <div class="sheet" style="padding-top:0">
     <p class="dhead">Pick your time and venue today!</p>
-    <a class="back" href="#" data-go='{"name":"tag","tag":"${o.tags[0]}"}'>← back to #${o.tags[0]}</a>
+    <a class="back" href="${hrefFor({ "name": "tag", "tag": "${o.tags[0]}" })}" data-go='{"name":"tag","tag":"${o.tags[0]}"}'>← back to #${o.tags[0]}</a>
     <div class="detail">
       <div class="shotwrap" style="--fb:${PLATE[p.plate]}">
         ${p.img ? `<img class="bg" src="${p.img}" alt="" onerror="this.remove()">` : ""}
@@ -2612,7 +2650,7 @@
 
         <hr class="rule">
         <h3 class="sec">You are hosting</h3>
-        <div class="grid3">${hosting.map(card).join("") || `<p class="sub">Nothing yet. <a href="#" data-go='{"name":"create"}'>Host one</a>.</p>`}</div>
+        <div class="grid3">${hosting.map(card).join("") || `<p class="sub">Nothing yet. <a href="${hrefFor({ "name": "create" })}" data-go='{"name":"create"}'>Host one</a>.</p>`}</div>
 
         <hr class="rule">
         <h3 class="sec">You are going to</h3>
@@ -2807,6 +2845,7 @@
             }
         });
 
+        view = fromHash(location.hash);
         render();
     </script>
 </body>
