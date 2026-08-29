@@ -13,25 +13,85 @@ def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS events (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            tags TEXT,  -- JSON-serialized dictionary/string
-            capacity INTEGER NOT NULL,
-            location_name TEXT NOT NULL,
-            lat REAL,   -- Nullable for now
-            lng REAL    -- Nullable for now
+        CREATE TABLE IF NOT EXISTS places (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            address TEXT NOT NULL,
+            suburb TEXT NOT NULL,
+            img TEXT,
+            plate INTEGER NOT NULL
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS outings (
+            id TEXT PRIMARY KEY,
+            day INTEGER NOT NULL,
+            host_id TEXT NOT NULL,
+            place_id TEXT NOT NULL,
+            starts_at TEXT NOT NULL,
+            seats INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            description TEXT,
+            tags TEXT,
+            restrict_gender TEXT,
+            restrict_age_bands TEXT
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS rsvps (
+            id TEXT PRIMARY KEY,
+            outing_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            state TEXT NOT NULL
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS comments (
+            id TEXT PRIMARY KEY,
+            place_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            outing_id TEXT,
+            body TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS messages (
+            id TEXT PRIMARY KEY,
+            outing_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            body TEXT NOT NULL,
+            at TEXT NOT NULL
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS txns (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            delta INTEGER NOT NULL,
+            reason TEXT NOT NULL,
+            outing_id TEXT,
+            created_at TEXT NOT NULL
         )
     """)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id TEXT PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
             bio TEXT,
             gender TEXT,
-            dob TEXT NOT NULL
+            age_band TEXT,
+            city TEXT,
+            tags_followed TEXT,
+            suspended_until TEXT,
+            verified_at TEXT,
+            face TEXT,
+            noshows INTEGER
         )
     """)
+    # We will drop the old events and users tables if they exist to start fresh
+    cursor.execute("DROP TABLE IF EXISTS events")
+    
     conn.commit()
     conn.close()
 
@@ -54,58 +114,26 @@ app.add_middleware(
 )
 
 # Pydantic Schemas for validation
-class EventBase(BaseModel):
-    title: str = Field(..., min_length=1, description="Title of the event")
-    tags: Dict[str, Any] = Field(default_factory=dict, description="Tags associated with the event vibes/types")
-    capacity: int = Field(..., gt=0, description="Introvert-friendly capacity cap")
-    location_name: str = Field(..., min_length=1, description="Location name string")
-    lat: Optional[float] = Field(None, description="Latitude for Leaflet Map")
-    lng: Optional[float] = Field(None, description="Longitude for Leaflet Map")
+class OutingCreate(BaseModel):
+    id: str
+    host_id: str
+    day: int
+    place_id: str
+    starts_at: str
+    seats: int
+    status: str
+    description: str
+    tags: List[str]
+    restrict_gender: Optional[str] = None
+    restrict_age_bands: List[str]
 
-class EventCreate(EventBase):
-    pass
+class RsvpCreate(BaseModel):
+    user_id: str
+    state: str
 
-class EventResponse(EventBase):
-    id: int
-
-# User Pydantic Schemas
-class UserBase(BaseModel):
-    username: str = Field(..., min_length=1, description="Public username")
-    bio: Optional[str] = Field(None, description="Short bio")
-    gender: Optional[str] = Field(None, description="Gender description")
-
-class UserCreate(UserBase):
-    dob: date = Field(..., description="Date of birth (YYYY-MM-DD)")
-
-class UserResponse(UserBase):
-    id: int
-    age_range: str = Field(..., description="Public age range calculated from DOB")
-
-# Helper to calculate public age range from date of birth
-def calculate_age_range(dob_str: str) -> str:
-    try:
-        dob = datetime.strptime(dob_str, "%Y-%m-%d").date()
-        today = date.today()
-        age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
-        
-        if age < 18:
-            return "Under 18"
-        elif age <= 19:
-            return "18-19"
-        elif age <= 25:
-            return "20-25"
-        elif age <= 30:
-            return "26-30"
-        elif age <= 40:
-            return "31-40"
-        elif age <= 50:
-            return "41-50"
-        elif age <= 60:
-            return "51-60"
-        else:
-            return "60+"
-    except Exception:
-        return "Unknown"
+class AttendanceUpdate(BaseModel):
+    user_id: str
+    status: str
 
 # Helpers to map sqlite rows to dicts
 def get_db_connection():
@@ -113,190 +141,138 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-def serialize_event(row: sqlite3.Row) -> Dict[str, Any]:
-    event_dict = dict(row)
-    # Parse tags JSON string back to dict
-    try:
-        event_dict["tags"] = json.loads(row["tags"]) if row["tags"] else {}
-    except Exception:
-        event_dict["tags"] = {}
-    return event_dict
-
-def serialize_user(row: sqlite3.Row) -> Dict[str, Any]:
-    user_dict = dict(row)
-    # Calculate age range from DOB
-    user_dict["age_range"] = calculate_age_range(row["dob"])
-    # Do not expose raw DOB publicly
-    if "dob" in user_dict:
-        del user_dict["dob"]
-    return user_dict
+def serialize_row(row: sqlite3.Row) -> Dict[str, Any]:
+    return dict(row)
 
 # Endpoints
-@app.get("/api/events", response_model=List[EventResponse])
-def get_events():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM events")
-    rows = cursor.fetchall()
-    conn.close()
-    return [serialize_event(row) for row in rows]
-
-@app.get("/api/events/{event_id}", response_model=EventResponse)
-def get_event(event_id: int):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM events WHERE id = ?", (event_id,))
-    row = cursor.fetchone()
-    conn.close()
-    if not row:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Event with id {event_id} not found"
-        )
-    return serialize_event(row)
-
-@app.post("/api/events", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
-def create_event(event: EventCreate):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    try:
-        tags_json = json.dumps(event.tags)
-        cursor.execute(
-            """
-            INSERT INTO events (title, tags, capacity, location_name, lat, lng)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (event.title, tags_json, event.capacity, event.location_name, event.lat, event.lng)
-        )
-        conn.commit()
-        event_id = cursor.lastrowid
-    except Exception as e:
-        conn.close()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create event: {str(e)}"
-        )
-    
-    # Retrieve the newly created event to ensure accuracy
-    cursor.execute("SELECT * FROM events WHERE id = ?", (event_id,))
-    row = cursor.fetchone()
-    conn.close()
-    return serialize_event(row)
-
-@app.put("/api/events/{event_id}", response_model=EventResponse)
-def update_event(event_id: int, event: EventCreate):
+@app.get("/api/state")
+def get_state():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Check if exists
-    cursor.execute("SELECT id FROM events WHERE id = ?", (event_id,))
-    if not cursor.fetchone():
-        conn.close()
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Event with id {event_id} not found"
-        )
-        
-    try:
-        tags_json = json.dumps(event.tags)
-        cursor.execute(
-            """
-            UPDATE events
-            SET title = ?, tags = ?, capacity = ?, location_name = ?, lat = ?, lng = ?
-            WHERE id = ?
-            """,
-            (event.title, tags_json, event.capacity, event.location_name, event.lat, event.lng, event_id)
-        )
-        conn.commit()
-    except Exception as e:
-        conn.close()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update event: {str(e)}"
-        )
-        
-    cursor.execute("SELECT * FROM events WHERE id = ?", (event_id,))
-    row = cursor.fetchone()
-    conn.close()
-    return serialize_event(row)
-
-@app.delete("/api/events/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_event(event_id: int):
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    state = {}
     
-    # Check if exists
-    cursor.execute("SELECT id FROM events WHERE id = ?", (event_id,))
-    if not cursor.fetchone():
-        conn.close()
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Event with id {event_id} not found"
-        )
-        
-    cursor.execute("DELETE FROM events WHERE id = ?", (event_id,))
-    conn.commit()
-    conn.close()
-    return None
-
-# User Endpoints
-@app.post("/api/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def create_user(user: UserCreate):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Check if username is already taken
-    cursor.execute("SELECT id FROM users WHERE username = ?", (user.username,))
-    if cursor.fetchone():
-        conn.close()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Username '{user.username}' is already taken"
-        )
-        
-    try:
-        # Save dob as string (YYYY-MM-DD)
-        dob_str = user.dob.strftime("%Y-%m-%d")
-        cursor.execute(
-            """
-            INSERT INTO users (username, bio, gender, dob)
-            VALUES (?, ?, ?, ?)
-            """,
-            (user.username, user.bio, user.gender, dob_str)
-        )
-        conn.commit()
-        user_id = cursor.lastrowid
-    except Exception as e:
-        conn.close()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create user: {str(e)}"
-        )
-        
-    cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
-    row = cursor.fetchone()
-    conn.close()
-    return serialize_user(row)
-
-@app.get("/api/users/{user_id}", response_model=UserResponse)
-def get_user(user_id: int):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
-    row = cursor.fetchone()
-    conn.close()
-    if not row:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User with id {user_id} not found"
-        )
-    return serialize_user(row)
-
-@app.get("/api/users", response_model=List[UserResponse])
-def get_users():
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    # users
     cursor.execute("SELECT * FROM users")
-    rows = cursor.fetchall()
+    users = []
+    for r in cursor.fetchall():
+        d = serialize_row(r)
+        d["tags_followed"] = json.loads(d["tags_followed"]) if d["tags_followed"] else []
+        users.append(d)
+    state["users"] = users
+    
+    # places
+    cursor.execute("SELECT * FROM places")
+    state["places"] = [serialize_row(r) for r in cursor.fetchall()]
+    
+    # outings
+    cursor.execute("SELECT * FROM outings")
+    outings = []
+    for r in cursor.fetchall():
+        d = serialize_row(r)
+        d["tags"] = json.loads(d["tags"]) if d["tags"] else []
+        d["restrict_age_bands"] = json.loads(d["restrict_age_bands"]) if d["restrict_age_bands"] else []
+        outings.append(d)
+    state["outings"] = outings
+    
+    # rsvps
+    cursor.execute("SELECT * FROM rsvps")
+    state["rsvps"] = [serialize_row(r) for r in cursor.fetchall()]
+    
+    # comments
+    cursor.execute("SELECT * FROM comments")
+    state["comments"] = [serialize_row(r) for r in cursor.fetchall()]
+    
+    # messages
+    cursor.execute("SELECT * FROM messages")
+    state["messages"] = [serialize_row(r) for r in cursor.fetchall()]
+    
+    # txns
+    cursor.execute("SELECT * FROM txns")
+    state["txns"] = [serialize_row(r) for r in cursor.fetchall()]
+    
     conn.close()
-    return [serialize_user(row) for row in rows]
+    return state
+
+@app.post("/api/outings", status_code=status.HTTP_201_CREATED)
+def create_outing(outing: OutingCreate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        tags_json = json.dumps(outing.tags)
+        age_bands_json = json.dumps(outing.restrict_age_bands)
+        cursor.execute(
+            """
+            INSERT INTO outings (id, day, host_id, place_id, starts_at, seats, status, description, tags, restrict_gender, restrict_age_bands)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (outing.id, outing.day, outing.host_id, outing.place_id, outing.starts_at, outing.seats, outing.status, outing.description, tags_json, outing.restrict_gender, age_bands_json)
+        )
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create outing: {str(e)}"
+        )
+    conn.close()
+    return {"message": "success"}
+
+@app.post("/api/outings/{outing_id}/rsvp")
+def rsvp_outing(outing_id: str, rsvp: RsvpCreate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Check credits logic could be handled here or frontend.
+        # Add rsvp
+        rsvp_id = f"r_{int(datetime.now().timestamp())}"
+        cursor.execute(
+            "INSERT INTO rsvps (id, outing_id, user_id, state) VALUES (?, ?, ?, ?)",
+            (rsvp_id, outing_id, rsvp.user_id, rsvp.state)
+        )
+        # Add txn for joining
+        txn_id = f"t_{int(datetime.now().timestamp())}"
+        cursor.execute(
+            "INSERT INTO txns (id, user_id, delta, reason, outing_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (txn_id, rsvp.user_id, -1, "Joined outing", outing_id, datetime.now().strftime("%d %b"))
+        )
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=500, detail=str(e))
+    conn.close()
+    return {"message": "success"}
+
+@app.post("/api/outings/{outing_id}/attendance")
+def confirm_attendance(outing_id: str, updates: List[AttendanceUpdate]):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Mark outing as past
+        cursor.execute("UPDATE outings SET status = 'past' WHERE id = ?", (outing_id,))
+        
+        # We need to deposit credits to the host for attending users, but the frontend also tracks `noshows`.
+        # Simplified: we just record attendance in rsvps/txns as needed.
+        for u in updates:
+            if u.status == "attended":
+                # Find host of this outing
+                cursor.execute("SELECT host_id FROM outings WHERE id = ?", (outing_id,))
+                host_row = cursor.fetchone()
+                if host_row:
+                    host_id = host_row["host_id"]
+                    if host_id != u.user_id:
+                        # Give host +1 credit for each attendee
+                        txn_id = f"t_{int(datetime.now().timestamp())}_{u.user_id}"
+                        cursor.execute(
+                            "INSERT INTO txns (id, user_id, delta, reason, outing_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                            (txn_id, host_id, 1, "Hosted", outing_id, datetime.now().strftime("%d %b"))
+                        )
+            elif u.status == "no_show":
+                # Increment noshows for user
+                cursor.execute("UPDATE users SET noshows = noshows + 1 WHERE id = ?", (u.user_id,))
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=500, detail=str(e))
+    conn.close()
+    return {"message": "success"}
