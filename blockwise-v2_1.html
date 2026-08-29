@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>BlockWise — know the block</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=B612+Mono:wght@400;700&family=Inter:wght@400;500;700&family=Afacad:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FFFFFF;
+  --cream:#FFFDEA;
+  --olive:#6A7645;
+  --olive-deep:#4A5230;
+  --char:#333131;
+  --hair:#D9D9D9;
+  --neutral:#E5E1DF;
+  --card:#FAF9F7;
+  --white:#fff;
+  /* category colours, straight off the interest picker frame */
+  --sun:#FFF6C4;    /* food and drinks */
+  --mint:#C4FFDF;   /* activity */
+  --peach:#FFD4C4;  /* sports and outdoors */
+  --sky:#C4E3FF;    /* nights out — built to match, not in the Figma */
+  /* second green family, from the outing detail frame */
+  --forest:#02542D; /* join action */
+  --moss:#636E3D;   /* panel headings */
+  --sage:#879379;   /* title banner */
+  --pale:#EFF7D4;   /* text on the banner */
+  --panel:#F3F3F3;  /* filter and detail panels */
+  --edge:#A9A9A9;   /* filter strip rule */
+  --mono:'B612 Mono', ui-monospace, monospace;
+  --body:'Inter', system-ui, sans-serif;
+  --script:'Afacad', serif;
+  --page:1440px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--char);
+  font-family:var(--body);
+  min-width:var(--page);
+}
+img{display:block}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--olive);outline-offset:3px}
+.wrap{width:var(--page);margin:0 auto}
+.hide{display:none !important}
+
+/* ---------- masthead ---------- */
+.ticker{background:var(--olive);height:67px;display:flex;align-items:center;justify-content:center;position:relative}
+.ticker p{font-family:var(--script);font-style:italic;font-size:30px;color:var(--white);margin:0}
+.bar{
+  background:var(--paper);height:140px;display:flex;align-items:center;
+  position:sticky;top:0;z-index:50;border-bottom:1px solid transparent;
+  transition:height .22s ease, box-shadow .22s ease, border-color .22s ease
+}
+.bar.compact{height:76px;border-bottom-color:var(--hair);box-shadow:0 6px 22px rgba(51,49,49,.07)}
+.bar .wrap{display:flex;align-items:center;justify-content:space-between;padding:0 60px}
+.mark{font-family:var(--mono);font-size:64px;color:var(--olive);letter-spacing:-2px;line-height:1;padding:0;transition:font-size .22s ease}
+.bar.compact .mark{font-size:32px;letter-spacing:-1px}
+.bar.compact .credits,.bar.compact .switch-btn{padding-top:8px;padding-bottom:8px}
+.bar.compact .credits b{font-size:19px}
+.bar-left,.bar-right{display:flex;align-items:center;gap:14px;width:460px}
+.bar-right{justify-content:flex-end}
+.iconbtn{
+  width:44px;height:44px;border-radius:100px;flex:none;
+  display:flex;align-items:center;justify-content:center;color:var(--char)
+}
+.iconbtn:hover{background:var(--neutral)}
+.iconbtn[aria-expanded="true"]{background:var(--neutral)}
+.bar-left .iconbtn{margin-right:16px}
+
+/* search sheet — drops out of the pinned bar */
+.sheetdrop{
+  position:absolute;left:0;right:0;top:100%;background:var(--paper);
+  border-bottom:1px solid var(--hair);box-shadow:0 16px 38px rgba(51,49,49,.11);
+  z-index:60;padding:22px 0 26px
+}
+.sheetdrop .wrap{display:block;padding:0 46px}
+.srow{display:flex;align-items:center;gap:16px}
+.srow .back{width:46px;height:46px;border-radius:100px;display:flex;align-items:center;justify-content:center;flex:none}
+.srow .back:hover{background:var(--neutral)}
+.sfield{
+  flex:1;display:flex;align-items:center;gap:14px;
+  background:var(--neutral);border-radius:100px;padding:0 20px;height:62px
+}
+.sfield svg{flex:none;color:#7a7676}
+.sfield input{
+  flex:1;border:0;background:transparent;outline:none;
+  font-family:var(--body);font-size:19px;color:var(--char);height:100%
+}
+.sfield input::placeholder{color:#8a8686}
+.sclear{
+  width:26px;height:26px;border-radius:100px;background:#c3bfbd;color:var(--paper);
+  display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;flex:none
+}
+.sclear:hover{background:var(--char)}
+.sugg{margin-top:20px;padding-left:62px}
+.sugg .lbl{font-family:var(--mono);font-size:12px;color:#8a8686;letter-spacing:.14em;margin-bottom:12px}
+.sugg .hits{display:flex;gap:10px;flex-wrap:wrap}
+.sugg .hit{
+  font-family:var(--mono);font-size:15px;border:1px solid transparent;border-radius:100px;
+  padding:11px 20px;background:var(--tc,var(--neutral));color:var(--char)
+}
+.sugg .hit:hover{box-shadow:inset 0 0 0 1.5px var(--char)}
+.sugg .none{font-size:15px;color:#8a8686}
+.navlink{
+  font-size:15px;letter-spacing:.06em;padding:10px 0;position:relative;
+  text-decoration:none;color:var(--char)
+}
+.navlink::after{content:"";position:absolute;left:0;right:0;bottom:2px;height:2px;background:transparent}
+.navlink:hover::after{background:var(--hair)}
+.navlink[aria-current="page"]::after{background:var(--olive)}
+@media (prefers-reduced-motion:reduce){
+  .bar,.mark{transition:none}
+}
+
+/* credit pill — the number that has to move on camera */
+.credits{
+  font-family:var(--mono);font-size:17px;color:var(--olive);
+  border:1px solid var(--olive);border-radius:100px;padding:11px 20px;
+  background:var(--cream);white-space:nowrap;
+}
+.credits b{font-weight:400;font-size:22px}
+@keyframes tick{0%{transform:scale(1)}30%{transform:scale(1.3);background:var(--olive);color:var(--cream)}100%{transform:scale(1)}}
+.credits.moved{animation:tick .75s ease}
+@media (prefers-reduced-motion:reduce){.credits.moved{animation:none;outline:3px solid var(--olive)}}
+
+/* fake auth: seeded user switcher */
+.switcher{position:relative}
+.switch-btn{
+  font-family:var(--mono);font-size:15px;border:1px solid var(--hair);border-radius:100px;
+  padding:11px 18px;background:var(--white);display:flex;align-items:center;gap:9px
+}
+.switch-btn .caret{font-size:11px;color:var(--olive)}
+.switch-menu{
+  position:absolute;right:0;top:calc(100% + 8px);background:var(--white);
+  border:1px solid var(--hair);border-radius:22px;padding:8px;width:290px;z-index:40;
+  box-shadow:0 14px 40px rgba(51,49,49,.16)
+}
+.switch-menu button{display:block;width:100%;text-align:left;padding:12px 14px;border-radius:16px;font-size:14px}
+.switch-menu button:hover{background:var(--cream)}
+.switch-menu .who{font-family:var(--mono);font-size:15px;display:block}
+.switch-menu .meta{color:var(--olive);font-size:12.5px;letter-spacing:.04em}
+
+/* ---------- tag rail ---------- */
+.rail{background:var(--paper);border-bottom:1px solid var(--hair)}
+.rail .wrap{display:flex;align-items:center;gap:10px;padding:22px 60px;flex-wrap:wrap}
+.rail .lede{font-family:var(--mono);font-size:14px;color:var(--olive);letter-spacing:.1em;margin-right:8px}
+.tag{
+  font-family:var(--mono);font-size:15px;color:var(--char);
+  border:1px solid transparent;border-radius:100px;padding:9px 18px;
+  background:var(--tc,var(--neutral))
+}
+.tag:hover{border-color:var(--char)}
+.tag[aria-pressed="true"]{border-color:var(--char);box-shadow:inset 0 0 0 1px var(--char)}
+.key{display:flex;gap:18px;align-items:center;margin-left:auto;flex-wrap:wrap}
+.key span{font-family:var(--mono);font-size:12px;color:#6d6a6a;display:flex;align-items:center;gap:7px;letter-spacing:.04em}
+.key i{width:14px;height:14px;border-radius:100px;display:block}
+
+/* ---------- the signature: full-bleed outing band ---------- */
+.band{position:relative;height:585px;width:100%;overflow:hidden;display:block;text-align:left;width:var(--page)}
+.band .plate{position:absolute;inset:0;background:var(--fb,linear-gradient(150deg,#6A7645,#333131))}
+.band .plate::after{
+  content:"";position:absolute;inset:0;opacity:.5;
+  background-image:radial-gradient(rgba(255,253,234,.16) 1px,transparent 1px);
+  background-size:5px 5px
+}
+.band .shot{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.band .scrim{position:absolute;inset:0;background:#000;opacity:.25}
+.band .lower{position:absolute;left:60px;right:60px;bottom:60px;display:flex;align-items:flex-end;gap:26px}
+.band .grow{flex:1;min-width:0}
+.band h2{
+  font-family:var(--mono);font-weight:400;color:var(--white);
+  font-size:64px;line-height:1.02;margin:0 0 20px;letter-spacing:-1px;
+  text-shadow:0 2px 26px rgba(0,0,0,.35)
+}
+.band .chips{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.chip{
+  font-family:var(--mono);font-size:20px;color:var(--char);background:var(--white);
+  border:1px solid transparent;border-radius:100px;padding:12px 24px;white-space:nowrap
+}
+.chip.ring{color:var(--olive);border-color:var(--olive);background:var(--cream)}
+.chip.seats{color:var(--olive);border-color:var(--olive);background:var(--cream)}
+.chip.cat{background:var(--tc,var(--neutral));color:var(--char)}
+.chip.gate{background:var(--char);border-color:var(--char);color:var(--white)}
+
+/* the host, deliberately small — the place is the hero */
+.hostline{position:absolute;left:60px;top:52px;display:flex;align-items:center;gap:13px;
+  background:rgba(51,49,49,.5);backdrop-filter:blur(7px);border-radius:100px;padding:8px 20px 8px 8px}
+.hostline .face{width:48px;height:48px;border-radius:100px;object-fit:cover;background:var(--olive)}
+.hostline .txt{color:var(--white);font-size:13.5px;line-height:1.4}
+.hostline .who{font-family:var(--mono);font-size:15px;display:flex;align-items:center;gap:6px}
+.hostline .bio{opacity:.85}
+.tickmark{display:inline-flex;width:15px;height:15px;border-radius:100px;background:var(--olive);
+  color:var(--cream);font-size:9.5px;align-items:center;justify-content:center;flex:none}
+
+.cta{
+  font-family:var(--mono);font-size:35px;background:var(--cream);color:var(--olive);
+  border-radius:100px;padding:24px 44px;white-space:nowrap;flex:none;border:1px solid var(--cream)
+}
+.cta:hover{background:var(--olive);color:var(--cream);border-color:var(--cream)}
+.cta[disabled]{background:transparent;color:var(--cream);border:1px solid rgba(255,253,234,.55);cursor:not-allowed}
+.cta.small{font-size:22px;padding:16px 32px}
+.blocked{
+  font-family:var(--mono);color:var(--cream);font-size:15px;background:rgba(51,49,49,.62);
+  border-radius:100px;padding:11px 22px;margin-top:14px;display:inline-block;letter-spacing:.02em
+}
+
+/* ---------- generic page furniture ---------- */
+.sheet{padding:70px 60px 90px}
+.eyebrow{font-family:var(--mono);font-size:14px;color:var(--olive);letter-spacing:.16em;margin:0 0 14px}
+h1.big{font-family:var(--mono);font-weight:400;font-size:56px;line-height:1.05;margin:0 0 10px;letter-spacing:-1px}
+h3.sec{font-family:var(--mono);font-weight:400;font-size:32px;margin:0 0 24px;letter-spacing:-.5px}
+.sub{font-size:17px;line-height:1.6;max-width:640px;color:#5c5959;margin:0 0 34px}
+.back{font-family:var(--mono);font-size:15px;color:var(--olive);margin-bottom:26px;display:inline-block}
+.rule{height:1px;background:var(--hair);border:0;margin:56px 0}
+.cols{display:grid;grid-template-columns:1fr 420px;gap:70px;align-items:start}
+
+.card{background:var(--card);border:1px solid var(--hair);border-radius:26px;padding:30px}
+.card h4{font-family:var(--mono);font-weight:400;font-size:20px;margin:0 0 16px}
+
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:26px}
+.mini{background:var(--card);border:1px solid var(--hair);border-radius:26px;overflow:hidden;text-align:left;display:block;width:100%}
+.mini .top{height:190px;position:relative;background:var(--fb,var(--olive))}
+.mini .top img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.mini .stripe{position:absolute;left:0;right:0;bottom:0;height:9px;background:var(--tc,var(--neutral))}
+.mini .body{padding:22px}
+.mini h4{font-family:var(--mono);font-weight:400;font-size:23px;margin:0 0 14px;line-height:1.2}
+.mini .row{display:flex;gap:8px;flex-wrap:wrap}
+.mini .row span{font-family:var(--mono);font-size:13px;color:var(--char);border-radius:100px;padding:6px 13px;background:var(--neutral)}
+.mini .row span.cat{background:var(--tc,var(--neutral))}
+.mini:hover{border-color:var(--char)}
+
+/* ---------- forms ---------- */
+.field{margin-bottom:24px}
+.field label{font-family:var(--mono);font-size:14px;color:var(--olive);letter-spacing:.09em;display:block;margin-bottom:9px}
+.field input,.field select,.field textarea{
+  width:100%;font-family:var(--body);font-size:16px;padding:15px 20px;
+  border:1px solid var(--hair);border-radius:100px;background:var(--white);color:var(--char)
+}
+.field textarea{border-radius:22px;resize:vertical;min-height:110px}
+.field .hint{font-size:13px;color:#7a7676;margin-top:8px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.picks{display:flex;gap:10px;flex-wrap:wrap}
+.pick{font-family:var(--mono);font-size:15px;border:1px solid transparent;border-radius:100px;
+  padding:11px 20px;background:var(--tc,var(--neutral));color:var(--char)}
+.pick[aria-pressed="true"]{box-shadow:inset 0 0 0 1.5px var(--char)}
+.pick.plain{background:var(--white);border-color:var(--hair);color:var(--olive)}
+.pick.plain[aria-pressed="true"]{background:var(--olive);border-color:var(--olive);color:var(--white);box-shadow:none}
+.submit{font-family:var(--mono);font-size:24px;background:var(--olive);color:var(--cream);border-radius:100px;padding:19px 46px}
+.submit:hover{background:var(--olive-deep)}
+
+/* ---------- attendance checklist ---------- */
+.roll{list-style:none;padding:0;margin:0}
+.roll li{display:flex;align-items:center;gap:18px;padding:20px 0;border-bottom:1px solid var(--hair)}
+.roll .face{width:52px;height:52px;border-radius:100px;background:var(--olive);flex:none;object-fit:cover}
+.roll .who{font-family:var(--mono);font-size:19px;display:flex;align-items:center;gap:7px}
+.roll .meta{font-size:13.5px;color:var(--olive);letter-spacing:.04em}
+.roll .act{margin-left:auto;display:flex;gap:10px}
+.pillbtn{font-family:var(--mono);font-size:15px;border:1px solid var(--hair);border-radius:100px;padding:11px 22px;background:var(--white);color:var(--olive)}
+.pillbtn:hover{border-color:var(--olive)}
+.pillbtn.on{background:var(--olive);border-color:var(--olive);color:var(--cream)}
+.pillbtn.off.on{background:var(--char);border-color:var(--char);color:var(--paper)}
+
+/* credits earned strip — the number moving is the pitch */
+.tally{
+  display:inline-flex;align-items:center;gap:22px;margin-top:34px;
+  background:var(--sun);border-radius:26px;padding:24px 34px
+}
+.tally .lbl{font-family:var(--mono);font-size:14px;letter-spacing:.1em}
+.tally .was{font-family:var(--mono);font-size:44px;color:#8a8686;line-height:1}
+.tally .arrow{font-size:26px}
+.tally .will{font-family:var(--mono);font-size:44px;color:var(--olive);line-height:1}
+.tally .note{font-size:15px}
+.submit[disabled]{background:var(--neutral);color:#8a8686;cursor:not-allowed}
+.done{font-family:var(--mono);font-size:15px;color:var(--olive)}
+
+/* ---------- ledger (never called that on screen) ---------- */
+.hist{list-style:none;padding:0;margin:0}
+.hist li{display:flex;align-items:baseline;gap:16px;padding:15px 0;border-bottom:1px solid var(--hair);font-size:15px}
+.hist .d{font-family:var(--mono);font-size:19px;width:52px;flex:none}
+.hist .d.plus{color:var(--olive)}
+.hist .d.minus{color:#9a4b3f}
+.hist .when{margin-left:auto;font-size:12.5px;color:#8a8686;font-family:var(--mono)}
+
+/* ---------- feed: filter strip (explore header) ---------- */
+.filterbar{background:var(--paper);border-top:1px solid var(--edge);border-bottom:1px solid var(--edge)}
+.filterbar .wrap{display:grid;grid-template-columns:1fr 480px;gap:60px;padding:28px 60px;align-items:center}
+.filterbar .ask{font-family:var(--mono);font-size:30px;margin:0 0 14px}
+.fpill{display:flex;align-items:center;gap:14px;background:var(--panel);border-radius:100px;height:53px;padding:0 26px}
+.fpill input,.fpill select{
+  flex:1;border:0;background:transparent;outline:none;
+  font-family:var(--mono);font-size:22px;color:var(--char);height:100%
+}
+.fpill input::placeholder{color:#7c7c7c}
+.fpill svg{flex:none;color:#7c7c7c}
+.frow{display:grid;grid-template-columns:120px 1fr;gap:20px;align-items:center;margin-bottom:14px}
+.frow:last-child{margin-bottom:0}
+.frow .lab{font-family:var(--mono);font-size:30px}
+
+/* ---------- feed: outing cards ---------- */
+.count{font-family:var(--mono);font-weight:700;font-size:50px;margin:0 0 34px}
+.results{display:grid;grid-template-columns:1fr 1fr;gap:40px 48px}
+.ocard{
+  position:relative;height:419px;border-radius:63px;overflow:hidden;
+  display:block;width:100%;text-align:left;background:var(--fb,var(--olive))
+}
+.ocard .shot{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ocard .scrim{position:absolute;inset:0;background:rgba(0,0,0,.25)}
+.ocard .inner{position:absolute;inset:0;padding:45px;display:flex;flex-direction:column}
+.ocard .face{width:84px;height:84px;border-radius:100px;object-fit:cover;background:var(--sage);flex:none}
+.ocard .push{flex:1}
+.ocard h3{
+  font-family:var(--mono);font-weight:400;font-size:50px;color:var(--white);
+  margin:0 0 18px;line-height:1.05;text-shadow:0 2px 22px rgba(0,0,0,.35)
+}
+.ocard .line{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.ocard .line:last-child{margin-bottom:0}
+.opill{
+  font-family:var(--mono);font-size:18px;color:var(--olive);background:var(--cream);
+  border:1px solid var(--hair);border-radius:100px;padding:12px 24px;white-space:nowrap
+}
+.opill.ring{border-color:var(--olive)}
+.opill.cat{background:var(--tc,var(--sun));border-color:transparent;color:var(--char)}
+.opill.gate{background:var(--char);border-color:var(--char);color:var(--white)}
+.ocard .join{
+  margin-left:auto;font-family:var(--mono);font-size:18px;
+  background:var(--cream);color:var(--olive);border-radius:100px;padding:12px 26px;white-space:nowrap
+}
+.ocard .join:hover{background:var(--forest);color:var(--paper)}
+.ocard .join[disabled]{background:rgba(255,253,234,.25);color:var(--cream);cursor:not-allowed}
+.ocard:hover .opill{border-color:var(--olive)}
+
+/* ---------- outing detail ---------- */
+.dhead{font-family:var(--mono);font-size:50px;color:var(--moss);text-align:center;margin:54px 0 44px}
+.detail{display:grid;grid-template-columns:1fr 626px;gap:80px;align-items:start}
+.shotwrap{position:relative;border-radius:26px;overflow:hidden;background:var(--fb,var(--olive))}
+.shotwrap .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.35}
+.banner{background:var(--sage);padding:20px 40px;position:relative}
+.banner h2{font-family:var(--mono);font-weight:700;font-size:40px;color:var(--pale);margin:0}
+.cal{position:relative;padding:24px 30px 30px;background:rgba(255,255,255,.92)}
+.cal table{width:100%;border-collapse:collapse}
+.cal th{
+  font-family:var(--mono);font-weight:400;font-size:11px;letter-spacing:.1em;
+  color:#7c7c7c;padding-bottom:10px;text-align:center
+}
+.cal td{
+  border:1px solid var(--hair);height:88px;text-align:center;vertical-align:top;
+  width:14.28%;padding:7px 6px
+}
+.cal td.today{background:rgba(2,84,45,.06)}
+.cal .num{font-family:var(--mono);font-size:11px;color:#b3b3b3;display:block;margin-bottom:6px}
+.cal .stack{display:flex;flex-direction:column;gap:4px;align-items:center}
+.cal .mark{display:block;width:100%;max-width:68px;height:14px;border-radius:100px;background:var(--forest)}
+.cal .mark.this{background:var(--forest)}
+.cal .mark.mine{background:var(--sun);border:1px solid #C9B85E}
+.cal .mark.venue{background:#A8CDB4}
+.callegend{display:flex;flex-direction:column;gap:8px;margin-top:18px}
+.callegend span{font-family:var(--mono);font-size:11.5px;color:#7c7c7c;display:flex;align-items:center;gap:9px;white-space:nowrap}
+.callegend i{width:24px;height:11px;border-radius:100px;flex:none}
+.callegend .sw.this{background:var(--forest)}
+.callegend .sw.mine{background:var(--sun);border:1px solid #C9B85E}
+.callegend .sw.venue{background:#A8CDB4}
+.clash{
+  font-family:var(--mono);font-size:13px;color:var(--char);background:var(--sun);
+  border-radius:100px;padding:11px 22px;margin:16px 0 0;display:inline-block
+}
+
+.panel{background:var(--panel);border-radius:100px;padding:56px 48px}
+.panel h3{font-family:var(--mono);font-weight:700;font-size:40px;color:var(--moss);margin:0 0 4px;line-height:1.15}
+.panel .time{font-family:var(--mono);font-weight:700;font-size:40px;color:var(--moss);margin:0 0 34px}
+.panel .hostchip{display:flex;align-items:center;gap:14px;background:var(--paper);border-radius:100px;padding:10px 24px 10px 10px;margin-bottom:30px}
+.panel .hostchip img,.panel .hostchip .ph{width:52px;height:52px;border-radius:100px;object-fit:cover;background:var(--sage);flex:none}
+.panel .hostchip .who{font-family:var(--mono);font-size:17px;display:flex;align-items:center;gap:7px}
+.panel .hostchip .meta{font-size:13px;color:var(--moss)}
+.seatbar{display:flex;align-items:center;gap:16px;margin-bottom:30px}
+.seatbar .lab{font-family:var(--mono);font-size:17px;color:var(--moss)}
+.seatbar .box{background:#B3B3B3;border-radius:100px;padding:16px 40px;font-family:var(--mono);font-size:24px;color:#FFFAFA;margin-left:auto}
+.joinbig{
+  display:block;width:100%;background:var(--forest);color:var(--white);
+  border-radius:100px;padding:20px 30px;font-family:var(--mono);font-size:30px;text-align:center
+}
+.joinbig .cost{display:block;font-size:15px;opacity:.8;margin-top:4px}
+.joinbig[disabled]{background:#B3B3B3;cursor:not-allowed}
+.joinbig:not([disabled]):hover{background:#03774A}
+.threadbtn{
+  display:flex;align-items:center;gap:20px;background:#B3B3B3;border-radius:100px;
+  padding:12px 30px 12px 12px;width:100%;margin-top:22px;color:#FFF2F2;font-family:var(--mono);font-size:24px
+}
+.threadbtn img,.threadbtn .ph{width:80px;height:80px;border-radius:100px;object-fit:cover;background:var(--sage);flex:none}
+.thread{margin-top:34px}
+.thread .msg{background:var(--paper);border-radius:26px;padding:22px 26px;margin-bottom:14px}
+.thread .msg .who{font-family:var(--mono);font-size:14px;color:var(--moss);margin-bottom:7px;display:block}
+.thread .msg p{margin:0;font-size:15.5px;line-height:1.55}
+.thread .lock{font-family:var(--mono);font-size:13px;color:#7c7c7c;margin-top:14px}
+
+/* ---------- place page photo strip ---------- */
+.strip{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.frameshot{height:260px;border-radius:22px;overflow:hidden;position:relative;background:var(--fb,var(--neutral))}
+.frameshot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+
+/* ---------- comments ---------- */
+.note{border-left:3px solid var(--olive);padding:6px 0 6px 22px;margin-bottom:30px}
+.note p{margin:0 0 9px;font-size:17px;line-height:1.6}
+.note .by{font-family:var(--mono);font-size:13px;color:var(--olive);letter-spacing:.04em}
+
+.flagline{font-family:var(--mono);font-size:14px;color:var(--olive);background:var(--white);
+  border:1px solid var(--hair);border-radius:100px;padding:11px 22px;display:inline-block}
+
+/* ---------- footer ---------- */
+footer{background:var(--char);color:var(--white);margin-top:0}
+footer .top{padding:78px 60px;text-align:center}
+footer .top p{font-size:40px;margin:0;letter-spacing:.01em}
+footer .btm{padding:0 60px 60px;display:flex;justify-content:space-between;align-items:flex-start}
+footer .wm{font-weight:700;font-size:48px}
+footer .wm small{display:block;font-weight:400;font-size:15px;opacity:.6;font-family:var(--mono);letter-spacing:.1em;margin-top:6px}
+footer nav b{font-size:20px;display:block;margin-bottom:10px}
+footer nav a{font-size:15px;display:inline-block;margin-right:18px;opacity:.85;text-decoration:none}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:38px;background:var(--char);color:var(--cream);
+  font-family:var(--mono);font-size:17px;padding:17px 32px;border-radius:100px;z-index:90;
+  box-shadow:0 12px 40px rgba(0,0,0,.3)}
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+<div id="toast"></div>
+
+<script>
+/* =====================================================================
+   BLOCKWISE — hackathon demo build
+   Scope per spec §13. Real: credit ledger, RSVP, seats, tag filter,
+   create outing, attendance checklist, restriction enforcement.
+   Faked: ID scan (tick only), auth (user switcher), persistence (memory).
+   ===================================================================== */
+
+/* Photos come from the Figma file. These URLs expire after 7 days.
+   To make them permanent: export the images from Figma into an /img
+   folder next to this file and change the values below to "img/x.jpg".
+   If a URL fails, a palette plate shows underneath and nothing breaks. */
+const IMG = {
+  matcha : "https://www.figma.com/api/mcp/asset/4e656563-60d0-4540-ad55-32e1a835ff75.png",
+  hike   : "https://www.figma.com/api/mcp/asset/4b77a23b-b573-460f-b46b-3640ab483164.png",
+  pottery: "https://www.figma.com/api/mcp/asset/fde7e80f-3fbd-4ddb-b4d0-1d2bed2e01a8.png",
+  face1  : "https://www.figma.com/api/mcp/asset/83fb43ca-7501-4234-95c7-0102fd70afed.png",
+  face2  : "https://www.figma.com/api/mcp/asset/a6f46b84-2fff-4dc6-8cd1-622fc7607768.png",
+  face3  : "https://www.figma.com/api/mcp/asset/f863ac46-07fc-4c50-9abf-f731d5f78e16.png"
+};
+
+const PLATE = [
+  "linear-gradient(155deg,#6A7645 0%,#8C9A5E 45%,#333131 100%)",
+  "linear-gradient(155deg,#4A5230 0%,#6A7645 50%,#2A2828 100%)",
+  "linear-gradient(155deg,#8C9A5E 0%,#5A6440 55%,#333131 100%)",
+  "linear-gradient(155deg,#333131 0%,#6A7645 60%,#4A5230 100%)"
+];
+
+/* ---------- seed data (§14 shape) ---------- */
+const DB = {
+  users: [
+    { id:"u1", username:"wombatpost",  bio:"chasing the perfect matcha", age_band:"20-24", gender:"F", city:"Sydney",
+      tags_followed:["matchacafe","coffee","thrifting","art"], suspended_until:null, verified_at:"2026-03-02", face:IMG.face1, noshows:2 },
+    { id:"u2", username:"slowlaps",    bio:"swims before work, always",   age_band:"25-29", gender:"M", city:"Sydney",
+      tags_followed:["swimming","coffee","hiking"], suspended_until:null, verified_at:"2026-02-11", face:IMG.face2, noshows:0 },
+    { id:"u3", username:"ninetysix",   bio:"walks the coast every Sunday", age_band:"30s", gender:"F", city:"Sydney",
+      tags_followed:["hiking","swimming","bookshops"], suspended_until:null, verified_at:"2026-01-30", face:IMG.face3, noshows:0 },
+    { id:"u4", username:"tuesdaybest", bio:"here for the noodles",        age_band:"20-24", gender:"M", city:"Sydney",
+      tags_followed:["food","markets","nightlife"], suspended_until:null, verified_at:"2026-04-18", face:null, noshows:1 }
+  ],
+  places: [
+    { id:"p1", name:"Cornersmith",            address:"Illawarra Rd",   suburb:"Marrickville", img:IMG.matcha,  plate:0 },
+    { id:"p2", name:"Coogee to Bondi track",  address:"Arden St",       suburb:"Coogee",       img:IMG.hike,    plate:1 },
+    { id:"p3", name:"Anzac Park pottery shed",address:"Ernest St",      suburb:"Cammeray",     img:IMG.pottery, plate:2 },
+    { id:"p4", name:"Tan Viet",               address:"John St",        suburb:"Cabramatta",   img:null,        plate:3 },
+    { id:"p5", name:"Black Star Pastry",      address:"Australia St",   suburb:"Newtown",      img:null,        plate:0 },
+    { id:"p6", name:"Addison Road Markets",   address:"Addison Rd",     suburb:"Marrickville", img:null,        plate:2 },
+    { id:"p7", name:"Bondi Icebergs",         address:"Notts Ave",      suburb:"Bondi Beach",  img:null,        plate:1 }
+  ],
+  outings: [
+    { id:"o1", day:14, host_id:"u1", place_id:"p1", starts_at:"Sat 14:00", seats:5, status:"upcoming",
+      description:"Three matcha places on one street. We start at Cornersmith and walk it out. I order for the table if you have no idea what to get.",
+      tags:["matchacafe","coffee"], restrict_gender:null, restrict_age_bands:[] },
+    { id:"o2", day:15, host_id:"u3", place_id:"p2", starts_at:"Sun 10:00", seats:5, status:"upcoming",
+      description:"Full coast walk, slow pace, coffee at the far end. Swim if the water is behaving.",
+      tags:["hiking","swimming"], restrict_gender:"F", restrict_age_bands:[] },
+    { id:"o3", day:22, host_id:"u4", place_id:"p3", starts_at:"Sun 10:00", seats:4, status:"upcoming",
+      description:"The shed runs a walk-in wheel session. No experience needed, everything you make is bad and that is the point.",
+      tags:["art"], restrict_gender:null, restrict_age_bands:[] },
+    { id:"o4", day:20, host_id:"u4", place_id:"p4", starts_at:"Fri 18:30", seats:5, status:"upcoming",
+      description:"Crispy chicken noodles, then a lap of the John St shops for dessert. Cabramatta is a 50 minute train and worth every minute.",
+      tags:["food","markets"], restrict_gender:null, restrict_age_bands:[] },
+    { id:"o5", day:14, host_id:"u2", place_id:"p7", starts_at:"Sat 06:15", seats:5, status:"upcoming",
+      description:"Sunrise lap before the pool fills up. Bring goggles, we get coffee after.",
+      tags:["swimming","coffee"], restrict_gender:null, restrict_age_bands:["20-24","25-29","30s"] },
+    { id:"o6", day:21, host_id:"u2", place_id:"p5", starts_at:"Sat 11:00", seats:4, status:"upcoming",
+      description:"Matcha and a strawberry watermelon cake, then the op shops down King St.",
+      tags:["matchacafe","thrifting"], restrict_gender:null, restrict_age_bands:[] },
+    /* the seeded past outing — §13 says time is cut, not clocked */
+    { id:"o0", day:2, host_id:"u1", place_id:"p6", starts_at:"Last Sunday 09:00", seats:5, status:"past",
+      description:"Market lap then matcha at the far end of the shed.",
+      tags:["markets","matchacafe"], restrict_gender:null, restrict_age_bands:[] }
+  ],
+  rsvps: [
+    { id:"r1", outing_id:"o1", user_id:"u2", state:"rsvp" },
+    { id:"r2", outing_id:"o1", user_id:"u4", state:"rsvp" },
+    { id:"r3", outing_id:"o2", user_id:"u1", state:"rsvp" },
+    { id:"r4", outing_id:"o4", user_id:"u2", state:"rsvp" },
+    { id:"r5", outing_id:"o6", user_id:"u3", state:"rsvp" },
+    /* attendance still to be marked — this is the checklist beat */
+    { id:"r6", outing_id:"o0", user_id:"u2", state:"rsvp" },
+    { id:"r7", outing_id:"o0", user_id:"u3", state:"rsvp" },
+    { id:"r8", outing_id:"o0", user_id:"u4", state:"rsvp" }
+  ],
+  comments: [
+    { id:"c1", place_id:"p1", user_id:"u2", outing_id:null, body:"The matcha is the reason to come but get the seeded loaf too. Tiny room, maybe eight seats, so a group of five is pushing it. Go on a weekday if you can.", created_at:"12 Aug" },
+    { id:"c2", place_id:"p1", user_id:"u3", outing_id:null, body:"Ordered the ceremonial grade because someone told me to and I still don't fully know what that means, but it was very good and they were patient about explaining it.", created_at:"3 Aug" },
+    { id:"c3", place_id:"p1", user_id:"u4", outing_id:null, body:"Cash is fine, card is fine, the queue moves. Sit at the window bench.", created_at:"28 Jul" },
+    { id:"c4", place_id:"p2", user_id:"u1", outing_id:null, body:"Do it the Coogee to Bondi way, not the other direction. The last stretch downhill into Bondi is much better than grinding up it.", created_at:"9 Aug" }
+  ],
+  messages: [
+    { id:"m1", outing_id:"o1", user_id:"u2", body:"Do we need to book or is it walk in? Happy to get there early and hold the bench.", at:"Tue" },
+    { id:"m2", outing_id:"o1", user_id:"u1", body:"Walk in is fine at 2pm, it empties out after lunch. Meet me out the front, I'll be the one holding a tote bag.", at:"Tue" },
+    { id:"m3", outing_id:"o1", user_id:"u4", body:"Coming from Cabramatta so might be five minutes late. Start without me.", at:"Wed" },
+    { id:"m4", outing_id:"o2", user_id:"u1", body:"Is the water usually calm enough to swim at the end?", at:"Thu" }
+  ],
+  txns: [
+    { id:"t1", user_id:"u1", delta:+3, reason:"Starter credits",                        outing_id:null, created_at:"2 Mar" },
+    { id:"t2", user_id:"u1", delta:+1, reason:"Hosted at Addison Road Markets",         outing_id:"o0", created_at:"20 Aug" },
+    { id:"t3", user_id:"u2", delta:+3, reason:"Starter credits",                        outing_id:null, created_at:"11 Feb" },
+    { id:"t4", user_id:"u2", delta:-1, reason:"Joined Cornersmith",                     outing_id:"o1", created_at:"21 Aug" },
+    { id:"t5", user_id:"u3", delta:+3, reason:"Starter credits",                        outing_id:null, created_at:"30 Jan" },
+    { id:"t6", user_id:"u4", delta:+3, reason:"Starter credits",                        outing_id:null, created_at:"18 Apr" },
+    { id:"t7", user_id:"u4", delta:-1, reason:"Joined Cornersmith",                     outing_id:"o1", created_at:"22 Aug" }
+  ]
+};
+
+const VOCAB = ["matchacafe","coffee","food","markets","hiking","art","livemusic","thrifting","nightlife","swimming","bookshops","photography"];
+
+/* Category colours lifted from the interest picker frame in the Figma.
+   sun / mint / peach are the exact values. sky is built to match for
+   nights out, which the Figma had no group for. */
+const CATS = {
+  food    : { label:"food and drinks", css:"var(--sun)",   tags:["matchacafe","coffee","food","markets"] },
+  making  : { label:"activity",        css:"var(--mint)",  tags:["art","thrifting","bookshops","photography"] },
+  outside : { label:"sports",          css:"var(--peach)", tags:["hiking","swimming"] },
+  nights  : { label:"nights out",      css:"var(--sky)",   tags:["livemusic","nightlife"] }
+};
+function catOf(tag){
+  for (const k in CATS) if (CATS[k].tags.includes(tag)) return CATS[k];
+  return { label:"other", css:"var(--neutral)", tags:[] };
+}
+const tint = tag => `--tc:${catOf(tag).css}`;
+
+/* ---------- state ---------- */
+let ME = "u1";
+let view = { name:"tag", tag:"matchacafe" };
+let menuOpen = false;
+let searchOpen = false;
+let searchQ = "";
+let staged = {};   /* rsvpId -> "attended" | "no_show", cleared on confirm */
+let threadOpen = null;   /* outing id whose comment thread is expanded */
+let feedWhere = "";
+let seq = 100;
+const nid = p => p + (++seq);
+
+/* ---------- helpers ---------- */
+const user  = id => DB.users.find(u => u.id === id);
+const place = id => DB.places.find(p => p.id === id);
+const outing= id => DB.outings.find(o => o.id === id);
+/* balance is always summed from rows. never a stored number. §13 */
+const balance = id => DB.txns.filter(t => t.user_id === id).reduce((a,t) => a + t.delta, 0);
+const taken   = oid => DB.rsvps.filter(r => r.outing_id === oid && r.state !== "cancelled" && r.state !== "no_show").length;
+const joined  = (oid,uid) => DB.rsvps.some(r => r.outing_id === oid && r.user_id === uid && r.state !== "cancelled");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+
+function credit(uid, delta, reason, oid){
+  DB.txns.push({ id:nid("t"), user_id:uid, delta, reason, outing_id:oid||null, created_at:"Today" });
+}
+function bandFor(o){
+  const p = place(o.place_id);
+  return { plate: PLATE[p.plate], img: p.img };
+}
+function genderWord(g){ return g === "F" ? "Women" : g === "M" ? "Men" : ""; }
+
+/* ---------- the rule that has to hold, checked in logic not just UI (§8) ---------- */
+function gate(o, u){
+  if (o.restrict_gender && o.restrict_gender !== u.gender)
+    return { ok:false, why:`${genderWord(o.restrict_gender)} only. Your verified gender is ${u.gender}.` };
+  if (o.restrict_age_bands.length && !o.restrict_age_bands.includes(u.age_band))
+    return { ok:false, why:`Open to ${o.restrict_age_bands.join(", ")} only. You are verified ${u.age_band}.` };
+  if (o.host_id === u.id)          return { ok:false, why:"You are hosting this one." };
+  if (joined(o.id, u.id))          return { ok:false, why:"You are on the list." };
+  if (taken(o.id) >= o.seats)      return { ok:false, why:"Full. Seats go first come, first served." };
+  if (balance(u.id) < 1)           return { ok:false, why:"You need 1 credit. Host an outing to earn some." };
+  return { ok:true };
+}
+
+/* ---------- actions ---------- */
+function join(oid){
+  const o = outing(oid), u = user(ME), g = gate(o, u);
+  if (!g.ok) return toast(g.why);                 // server-side style check, not just a disabled button
+  DB.rsvps.push({ id:nid("r"), outing_id:oid, user_id:ME, state:"rsvp" });
+  credit(ME, -1, "Joined " + place(o.place_id).name, oid);
+  render(); pulse();
+  toast("You are in. 1 credit spent.");
+}
+/* Marks are staged, not committed. Credits move only on confirm,
+   so the balance makes one jump instead of several small ticks. */
+function stage(rid, state){
+  if (staged[rid] === state) delete staged[rid];
+  else staged[rid] = state;
+  render();
+}
+function confirmAttendance(oid){
+  const open = DB.rsvps.filter(r => r.outing_id === oid && r.state === "rsvp");
+  let earned = 0;
+  open.forEach(r => {
+    const s = staged[r.id];
+    if (!s) return;
+    r.state = s;
+    if (s === "attended"){ credit(ME, +1, "Hosted " + user(r.user_id).username, oid); earned++; }
+    delete staged[r.id];
+  });
+  render();
+  if (earned){ pulse(); toast(`Confirmed. +${earned} credits`); }
+  else toast("Confirmed. No credits earned.");
+}
+function pulse(){
+  const el = document.querySelector(".credits");
+  if (!el) return;
+  el.classList.remove("moved"); void el.offsetWidth; el.classList.add("moved");
+}
+let tt;
+function toast(msg){
+  const box = document.getElementById("toast");
+  box.innerHTML = `<div class="toast">${esc(msg)}</div>`;
+  clearTimeout(tt); tt = setTimeout(() => box.innerHTML = "", 2600);
+}
+function go(v){ view = v; menuOpen = false; searchOpen = false; render(); window.scrollTo(0,0); }
+
+const ICON = {
+  glass: `<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"
+    stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>`,
+  back:  `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+    stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>`,
+  cal:   `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>`,
+  pin:   `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>`
+};
+
+/* ---------- chrome ---------- */
+function masthead(){
+  const me = user(ME);
+  return `
+  <div class="ticker"><p>your block, new faces</p></div>
+  <div class="bar"><div class="wrap">
+    <div class="bar-left">
+      <button class="iconbtn" id="searchbtn" aria-label="Search" aria-expanded="${searchOpen}">${ICON.glass}</button>
+      <a class="navlink" href="#" data-go='{"name":"tag","tag":"matchacafe"}' ${view.name==="tag"?'aria-current="page"':""}>OUTINGS</a>
+      <a class="navlink" href="#" data-go='{"name":"create"}' ${view.name==="create"?'aria-current="page"':""}>HOST ONE</a>
+      <a class="navlink" href="#" data-go='{"name":"account"}' ${view.name==="account"?'aria-current="page"':""}>YOU</a>
+    </div>
+    <button class="mark" data-go='{"name":"tag","tag":"matchacafe"}'>BlockWise</button>
+    <div class="bar-right">
+      <div class="credits" title="Only you can see this">${balance(ME)} <b>credits</b> left</div>
+      <div class="switcher">
+        <button class="switch-btn" id="switch">@${esc(me.username)} <span class="caret">▼</span></button>
+        ${menuOpen ? `<div class="switch-menu">${DB.users.map(u => `
+          <button data-user="${u.id}">
+            <span class="who">@${esc(u.username)}</span>
+            <span class="meta">${u.age_band} · ${u.gender} · ${balance(u.id)} credits</span>
+          </button>`).join("")}</div>` : ""}
+      </div>
+    </div>
+    ${searchOpen ? searchSheet() : ""}
+  </div></div>`;
+}
+
+function searchSheet(){
+  return `
+  <div class="sheetdrop"><div class="wrap">
+    <div class="srow">
+      <button class="back" id="sclose" aria-label="Close search">${ICON.back}</button>
+      <div class="sfield">
+        ${ICON.glass}
+        <input id="searchq" placeholder="Search" value="${esc(searchQ)}" autocomplete="off">
+        <button class="sclear" id="swipe" aria-label="Clear">✕</button>
+      </div>
+    </div>
+    <div class="sugg" id="sugg">${suggest(searchQ)}</div>
+  </div></div>`;
+}
+
+/* live matches while typing. Enter goes to the results page. */
+function matches(q){
+  const s = q.trim().toLowerCase();
+  if (!s) return { tags:[], places:[] };
+  return {
+    tags:   VOCAB.filter(t => t.includes(s)),
+    places: DB.places.filter(p => (p.name + " " + p.suburb).toLowerCase().includes(s))
+  };
+}
+function suggest(q){
+  if (!q.trim()) return `<div class="lbl">TRY A TAG, A PLACE OR A SUBURB</div>
+    <div class="hits">${["matchacafe","hiking","Marrickville","Cabramatta"].map(x =>
+      `<button class="hit" data-seed="${x}">${esc(x)}</button>`).join("")}</div>`;
+  const m = matches(q);
+  if (!m.tags.length && !m.places.length)
+    return `<div class="none">Nothing matches "${esc(q)}" yet. Press enter to search anyway.</div>`;
+  return `
+    ${m.tags.length ? `<div class="lbl">TAGS</div><div class="hits" style="margin-bottom:18px">
+      ${m.tags.map(t => `<button class="hit" data-tag="${t}" style="${tint(t)}">#${t}</button>`).join("")}</div>` : ""}
+    ${m.places.length ? `<div class="lbl">PLACES</div><div class="hits">
+      ${m.places.map(p => `<button class="hit" data-go='{"name":"place","id":"${p.id}"}'>${esc(p.name)} · ${esc(p.suburb)}</button>`).join("")}</div>` : ""}`;
+}
+function footer(){
+  return `<footer>
+    <div class="top"><p>your block, new faces</p></div>
+    <div class="btm">
+      <div class="wm">BlockWise<small>KNOW THE BLOCK</small></div>
+      <nav><b>NAVIGATE</b>
+        <a href="#" data-go='{"name":"tag","tag":"matchacafe"}'>OUTINGS</a>
+        <a href="#" data-go='{"name":"create"}'>HOST ONE</a>
+        <a href="#" data-go='{"name":"account"}'>YOU</a>
+        <a href="#" data-go='{"name":"interests"}'>INTERESTS</a>
+      </nav>
+    </div>
+  </footer>`;
+}
+
+/* ---------- the band: the one bold thing on the page ---------- */
+function band(o){
+  const p = place(o.place_id), h = user(o.host_id), b = bandFor(o), me = user(ME);
+  const g = gate(o, me);
+  const left = o.seats - taken(o.id);
+  const gateChip = o.restrict_gender ? `<span class="chip gate">${genderWord(o.restrict_gender)} only</span>`
+                 : o.restrict_age_bands.length ? `<span class="chip gate">${o.restrict_age_bands.join(" / ")}</span>` : "";
+  return `
+  <div class="band" style="--fb:${b.plate}">
+    <div class="plate"></div>
+    ${b.img ? `<img class="shot" src="${b.img}" alt="" onerror="this.remove()">` : ""}
+    <div class="scrim"></div>
+
+    <div class="hostline">
+      ${h.face ? `<img class="face" src="${h.face}" alt="" onerror="this.remove()">` : `<span class="face"></span>`}
+      <span class="txt">
+        <span class="who">@${esc(h.username)} <span class="tickmark">✓</span> ${h.age_band} · ${h.gender}</span>
+        <span class="bio">${esc(h.bio)}</span>
+      </span>
+    </div>
+
+    <div class="lower">
+      <div class="grow">
+        <h2><button data-go='{"name":"outing","id":"${o.id}"}' style="all:unset;cursor:pointer">${esc(p.name)}</button></h2>
+        <div class="chips">
+          <span class="chip cat" style="${tint(o.tags[0])}">#${esc(o.tags[0])}</span>
+          <span class="chip">${esc(p.suburb.toUpperCase())}, NSW</span>
+          <span class="chip ring">${esc(o.starts_at)}</span>
+          <span class="chip seats">${left} of ${o.seats} seats</span>
+          ${gateChip}
+        </div>
+        ${!g.ok && g.why !== "You are on the list." ? `<div class="blocked">${esc(g.why)}</div>` : ""}
+        ${joined(o.id, ME) ? `<div class="blocked">You are on the list</div>` : ""}
+      </div>
+      <button class="cta" ${g.ok ? `data-go='{"name":"outing","id":"${o.id}"}'` : "disabled"}>
+        ${o.host_id === ME ? "YOU'RE HOSTING" : joined(o.id, ME) ? "JOINED" : taken(o.id) >= o.seats ? "FULL" : "SIGN UP"}
+      </button>
+    </div>
+  </div>`;
+}
+
+/* ---------- views ---------- */
+/* Ranking per §12: tag overlap first, then suburb familiarity, then
+   time until start. No embeddings, as instructed. */
+function rank(list, u){
+  const seen = {};
+  DB.rsvps.filter(r => r.user_id === u.id).forEach(r => {
+    const o = outing(r.outing_id); if (o) seen[place(o.place_id).suburb] = 1;
+  });
+  return list.slice().sort((a,b) => score(b) - score(a));
+  function score(o){
+    const overlap = o.tags.filter(t => u.tags_followed.includes(t)).length;
+    const near = seen[place(o.place_id).suburb] ? 1 : 0;
+    const soon = 1 / (1 + DB.outings.indexOf(o));
+    return overlap * 100 + near * 20 + soon;
+  }
+}
+
+function feedList(query){
+  const searching = query !== undefined;
+  const t = searching ? "all" : view.tag;
+  let list = DB.outings.filter(o => o.status === "upcoming");
+  if (t !== "all") list = list.filter(o => o.tags.includes(t));
+  const q = (searching ? query : "").trim().toLowerCase();
+  if (q) list = list.filter(o => {
+    const p = place(o.place_id);
+    return (p.name + " " + p.suburb + " " + o.tags.join(" ") + " " + o.description).toLowerCase().includes(q);
+  });
+  if (searching && feedWhere) list = list.filter(o => place(o.place_id).suburb === feedWhere);
+  return rank(list, user(ME));
+}
+
+function ocard(o){
+  const p = place(o.place_id), h = user(o.host_id), me = user(ME);
+  const g = gate(o, me);
+  const left = o.seats - taken(o.id);
+  const gateChip = o.restrict_gender ? `<span class="opill gate">${genderWord(o.restrict_gender)} only</span>`
+                 : o.restrict_age_bands.length ? `<span class="opill gate">${o.restrict_age_bands.join(" / ")}</span>` : "";
+  return `
+  <div class="ocard" style="--fb:${PLATE[p.plate]}">
+    ${p.img ? `<img class="shot" src="${p.img}" alt="" onerror="this.remove()">` : ""}
+    <div class="scrim"></div>
+    <div class="inner">
+      ${h.face ? `<img class="face" src="${h.face}" alt="" onerror="this.remove()">` : `<span class="face"></span>`}
+      <span class="push"></span>
+      <h3><button data-go='{"name":"outing","id":"${o.id}"}' style="all:unset;cursor:pointer">${esc(p.name)}</button></h3>
+      <div class="line">
+        <span class="opill">${esc(p.suburb)}, NSW</span>
+        <span class="opill cat" style="${tint(o.tags[0])}">#${esc(o.tags[0])}</span>
+        ${gateChip}
+      </div>
+      <div class="line">
+        <span class="opill ring">${esc(o.starts_at)}</span>
+        <span class="opill">${left} of ${o.seats} seats</span>
+        <button class="join" ${g.ok ? `data-go='{"name":"outing","id":"${o.id}"}'` : "disabled"}>
+          ${o.host_id === ME ? "YOU'RE HOSTING" : joined(o.id, ME) ? "JOINED"
+            : left === 0 ? "FULL" : "SIGN UP"}
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* One layout, two headers: explore (ranked + filters) or a single tag. */
+/* FEED / TAG PAGE — one card layout, two headers.
+   "everything" = ranked feed. A tag = that tag's outings. */
+/* HOME / TAG PAGE — the original full-bleed band layout, two headers.
+   The card grid belongs to search results only. */
+function vTag(){
+  const t = view.tag;
+  const explore = t === "all";
+  const list = feedList();
+  const spots = explore ? [] : DB.places.filter(p => DB.outings.some(o => o.tags.includes(t) && o.place_id === p.id));
+  const notes = explore ? [] : DB.comments.filter(c => spots.some(p => p.id === c.place_id));
+
+  const header = explore ? `
+    <div class="sheet" style="padding-bottom:34px">
+      <p class="eyebrow">YOUR FEED</p>
+      <h1 class="big" style="display:inline-block;background:var(--neutral);
+        border-radius:100px;padding:18px 44px;margin-bottom:22px">everything on soon</h1>
+      <p class="sub">${list.length} in Sydney, ranked by the tags you follow, then how close it is, then how soon it starts.</p>
+    </div>`
+  : `<div class="sheet" style="padding-bottom:34px">
+      <p class="eyebrow">TAG PAGE · ${esc(catOf(t).label.toUpperCase())}</p>
+      <h1 class="big" style="display:inline-block;background:${catOf(t).css};
+        border-radius:100px;padding:18px 44px;margin-bottom:22px">#${esc(t)}</h1>
+      <p class="sub">${list.length} coming up in Sydney. Joining costs 1 credit. You earn credits by hosting.</p>
+    </div>`;
+
+  return `
+  <div class="rail"><div class="wrap">
+    <span class="lede">FOLLOWING</span>
+    <button class="tag" data-tag="all" aria-pressed="${explore}" style="--tc:var(--neutral)">everything</button>
+    ${VOCAB.map(x => `<button class="tag" data-tag="${x}" aria-pressed="${x===t}" style="${tint(x)}">#${x}</button>`).join("")}
+    <span class="key">${Object.values(CATS).map(c => `<span><i style="background:${c.css}"></i>${c.label}</span>`).join("")}</span>
+  </div></div>
+
+  ${header}
+
+  ${list.map(band).join("") || `<div class="sheet"><p class="sub">Nothing here yet.
+    <a href="#" data-go='{"name":"create"}'>Host the first one.</a></p></div>`}
+
+  ${spots.length ? `<div class="sheet">
+    <h3 class="sec">Places this tag has been</h3>
+    <div class="grid3">${spots.map(p => `
+      <button class="mini" data-go='{"name":"place","id":"${p.id}"}' style="--fb:${PLATE[p.plate]};${tint(t)}">
+        <div class="top">${p.img ? `<img src="${p.img}" alt="" onerror="this.remove()">` : ""}<span class="stripe"></span></div>
+        <div class="body">
+          <h4>${esc(p.name)}</h4>
+          <div class="row"><span class="cat">${esc(p.suburb)}</span><span>${DB.comments.filter(c=>c.place_id===p.id).length} notes</span></div>
+        </div>
+      </button>`).join("")}
+    </div>
+    ${notes.length ? `<hr class="rule"><h3 class="sec">What people wrote after</h3>
+      ${notes.slice(0,3).map(c => `<div class="note"><p>${esc(c.body)}</p>
+        <span class="by">@${esc(user(c.user_id).username)} · ${esc(place(c.place_id).name)} · ${c.created_at}</span></div>`).join("")}` : ""}
+  </div>` : ""}`;
+}
+
+/* Calendar for the outing detail.
+   Three layers stack in the same cell when they land on the same day:
+     this   — the outing you're looking at
+     mine   — outings you've already joined (so a clash is visible)
+     venue  — other outings at this same place
+   Deduped by outing id, so "mine" wins over "venue" for the same event. */
+function calendar(o){
+  const p = place(o.place_id);
+  const byDay = {};
+  function add(day, kind, label, id){
+    if (!day) return;
+    byDay[day] = byDay[day] || [];
+    if (byDay[day].some(m => m.id === id)) return;
+    byDay[day].push({ kind, label, id });
+  }
+
+  add(o.day, "this", place(o.place_id).name, o.id);
+
+  DB.rsvps
+    .filter(r => r.user_id === ME && r.state !== "cancelled")
+    .forEach(r => {
+      const x = outing(r.outing_id);
+      if (x && x.status === "upcoming" && x.id !== o.id)
+        add(x.day, "mine", place(x.place_id).name, x.id);
+    });
+
+  DB.outings
+    .filter(x => x.place_id === p.id && x.id !== o.id && x.status === "upcoming")
+    .forEach(x => add(x.day, "venue", place(x.place_id).name, x.id));
+
+  const clash = (byDay[o.day] || []).filter(m => m.kind === "mine");
+
+  let cells = "";
+  for (let row = 0; row < 5; row++){
+    cells += "<tr>";
+    for (let col = 0; col < 7; col++){
+      const d = row * 7 + col + 1;
+      const list = byDay[d] || [];
+      cells += `<td${d === o.day ? ' class="today"' : ""}>${
+        d <= 31 ? `<span class="num">${d}</span>` : ""}${
+        list.length ? `<span class="stack">${list.map(m =>
+          `<span class="mark ${m.kind}" title="${esc(m.label)}"></span>`).join("")}</span>` : ""}</td>`;
+    }
+    cells += "</tr>";
+  }
+
+  return `<div class="cal">
+    <table>
+      <thead><tr>${["SUN","MON","TUE","WED","THU","FRI","SAT"].map(d => `<th>${d}</th>`).join("")}</tr></thead>
+      <tbody>${cells}</tbody>
+    </table>
+    <div class="callegend">
+      <span><i class="sw this"></i>this outing</span>
+      <span><i class="sw mine"></i>already joined</span>
+      <span><i class="sw venue"></i>also at this place</span>
+    </div>
+    ${clash.length ? `<p class="clash">You already have ${clash.length === 1 ? "something" : clash.length + " things"} on this day: ${
+      clash.map(m => esc(m.label)).join(", ")}.</p>` : ""}
+  </div>`;
+}
+
+function vOuting(){
+  const o = outing(view.id), p = place(o.place_id), h = user(o.host_id), me = user(ME);
+  const g = gate(o, me);
+  const left = o.seats - taken(o.id);
+  const going = DB.rsvps.filter(r => r.outing_id === o.id && r.state !== "cancelled").map(r => user(r.user_id));
+  const thread = DB.messages.filter(m => m.outing_id === o.id);
+  return `
+  <div class="sheet" style="padding-top:0">
+    <p class="dhead">Pick your time and venue today!</p>
+    <a class="back" href="#" data-go='{"name":"tag","tag":"${o.tags[0]}"}'>← back to #${o.tags[0]}</a>
+    <div class="detail">
+      <div class="shotwrap" style="--fb:${PLATE[p.plate]}">
+        ${p.img ? `<img class="bg" src="${p.img}" alt="" onerror="this.remove()">` : ""}
+        <div class="banner"><h2>${esc(p.name)}</h2></div>
+        ${calendar(o)}
+      </div>
+
+      <div class="panel">
+        <div class="hostchip">
+          ${h.face ? `<img src="${h.face}" alt="" onerror="this.remove()">` : `<span class="ph"></span>`}
+          <span><span class="who">@${esc(h.username)} <span class="tickmark">✓</span></span>
+          <span class="meta">${h.age_band} · ${h.gender} · verified</span></span>
+        </div>
+        <h3>${esc(p.name)}</h3>
+        <p class="time">${esc(o.starts_at)}</p>
+        <div class="seatbar">
+          <span class="lab">Seats left</span>
+          <span class="box">${left}</span>
+        </div>
+        <button class="joinbig" ${g.ok ? `data-join="${o.id}"` : "disabled"}>
+          ${o.host_id === ME ? "You're hosting" : joined(o.id, ME) ? "You're in"
+            : left === 0 ? "Full" : "Join now"}
+          <span class="cost">${g.ok ? "costs 1 credit · you have " + balance(ME) : esc(g.why)}</span>
+        </button>
+        <button class="threadbtn" data-thread="${o.id}">
+          ${going[0] && going[0].face ? `<img src="${going[0].face}" alt="" onerror="this.remove()">` : `<span class="ph"></span>`}
+          <span>comments</span>
+          <span style="margin-left:auto;font-size:18px">${thread.length}</span>
+        </button>
+        ${threadOpen === o.id ? `<div class="thread">
+          ${thread.map(m => `<div class="msg">
+            <span class="who">@${esc(user(m.user_id).username)} · ${esc(m.at)}</span>
+            <p>${esc(m.body)}</p></div>`).join("")
+            || `<div class="msg"><p>Nothing yet. Whoever joins first can start it.</p></div>`}
+          <p class="lock">Everyone attending sees this. It locks 24 hours after the outing ends and nothing carries over. There are no direct messages on BlockWise.</p>
+        </div>` : ""}
+      </div>
+    </div>
+
+    <hr class="rule">
+    <div class="cols">
+      <div>
+        <p class="eyebrow">${esc(p.address.toUpperCase())}, ${esc(p.suburb.toUpperCase())}</p>
+        <h1 class="big">What happens</h1>
+        <p class="sub">${esc(o.description)}</p>
+        <div class="picks">${o.tags.map(t => `<button class="pick" data-tag="${t}" style="${tint(t)}">#${t}</button>`).join("")}</div>
+      </div>
+      <div>
+        <div class="card">
+          <h4>Who is coming</h4>
+          <ul class="roll">${going.map(u => `<li style="padding:13px 0">
+            <span class="who">@${esc(u.username)} <span class="tickmark">✓</span></span>
+            <span class="meta" style="margin-left:auto">${u.age_band} · ${u.gender}</span></li>`).join("")
+            || `<li style="border:0"><span class="meta">No one yet. Be first.</span></li>`}</ul>
+        </div>
+        <div class="card" style="margin-top:22px">
+          <h4>The place</h4>
+          <button class="pillbtn" style="display:block;width:100%;text-align:left"
+            data-go='{"name":"place","id":"${p.id}"}'>${esc(p.name)} · ${DB.comments.filter(c=>c.place_id===p.id).length} notes</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function vPlace(){
+  const p = place(view.id);
+  const notes = DB.comments.filter(c => c.place_id === p.id);
+  const soon  = DB.outings.filter(o => o.place_id === p.id && o.status === "upcoming");
+  const tag   = soon.length ? soon[0].tags[0] : "coffee";
+  return `
+  <div class="band" style="--fb:${PLATE[p.plate]};height:440px">
+    <div class="plate"></div>
+    ${p.img ? `<img class="shot" src="${p.img}" alt="" onerror="this.remove()">` : ""}
+    <div class="scrim"></div>
+    <div class="lower"><div class="grow">
+      <h2 style="font-size:88px">${esc(p.name)}</h2>
+      <div class="chips">
+        <span class="chip cat" style="${tint(tag)}">#${esc(tag)}</span>
+        <span class="chip">${esc(p.address.toUpperCase())}, ${esc(p.suburb.toUpperCase())}</span>
+        <span class="chip ring">${notes.length} written notes</span>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="sheet" style="padding-bottom:0">
+    <div class="strip">
+      ${[0,1,2].map(i => `<div class="frameshot" style="--fb:${PLATE[(p.plate + i) % PLATE.length]}">
+        ${p.img ? `<img src="${p.img}" alt="" onerror="this.remove()">` : ""}</div>`).join("")}
+    </div>
+  </div>
+
+  <div class="sheet">
+    <div class="cols">
+      <div>
+        <p class="eyebrow">WHAT PEOPLE WROTE</p>
+        <h1 class="big" style="margin-bottom:34px">Notes on the place</h1>
+        ${notes.map(c => `<div class="note"><p>${esc(c.body)}</p>
+          <span class="by">@${esc(user(c.user_id).username)} · ${c.created_at}</span></div>`).join("")
+          || `<p class="sub">No notes yet. The first person to go can write one.</p>`}
+        <p class="sub" style="font-size:15px;margin-top:8px">No stars. No score. Notes are about the place, never the people.</p>
+      </div>
+      <div>
+        <div class="card">
+          <h4>Coming up here</h4>
+          ${soon.length ? soon.map(o => `<button class="pillbtn" style="display:block;width:100%;text-align:left;margin-bottom:10px"
+            data-go='{"name":"outing","id":"${o.id}"}'>${esc(o.starts_at)} · ${o.seats - taken(o.id)} seats</button>`).join("")
+            : `<p style="font-size:14.5px;color:#6d6a6a;margin:0">Nothing booked. Host the first one.</p>`}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function vCreate(){
+  return `
+  <div class="sheet">
+    <p class="eyebrow">HOST AN OUTING</p>
+    <h1 class="big">Take people somewhere<br>you already go</h1>
+    <p class="sub">Five seats maximum. You earn 1 credit for every person who turns up, so a full outing funds five of your own.</p>
+    <div class="cols">
+      <div>
+        <div class="field"><label>PLACE</label>
+          <select id="f-place">${DB.places.map(p => `<option value="${p.id}">${esc(p.name)} — ${esc(p.suburb)}</option>`).join("")}</select></div>
+        <div class="pair">
+          <div class="field"><label>WHEN</label><input id="f-when" value="Sat 15:30"></div>
+          <div class="field"><label>DAY OF MONTH</label>
+            <select id="f-day">${Array.from({length:31},(_,i)=>i+1).map(d =>
+              `<option ${d===28?"selected":""}>${d}</option>`).join("")}</select></div>
+        </div>
+        <div class="field"><label>SEATS</label>
+          <select id="f-seats"><option>2</option><option>3</option><option>4</option><option selected>5</option></select></div>
+        <div class="field"><label>WHAT HAPPENS</label>
+          <textarea id="f-desc" placeholder="Say what you'd tell a friend. Where you're meeting, what to order, how long it runs."></textarea></div>
+        <div class="field"><label>TAGS</label>
+          <div class="picks" id="f-tags">${VOCAB.map(t => `<button class="pick" data-pick="${t}" aria-pressed="false" style="${tint(t)}">#${t}</button>`).join("")}</div></div>
+        <div class="pair">
+          <div class="field"><label>WHO CAN JOIN</label>
+            <select id="f-gender"><option value="">Anyone</option><option value="F">Women only</option><option value="M">Men only</option></select>
+            <p class="hint">Enforced against verified ID, not self-declared.</p></div>
+          <div class="field"><label>AGE BANDS</label>
+            <select id="f-age"><option value="">Any age</option><option value="20-24,25-29">20s only</option>
+            <option value="20-24,25-29,30s">20s and 30s</option><option value="30s,40s,50s,60+">30 and over</option></select></div>
+        </div>
+        <button class="submit" id="f-go">Post outing</button>
+      </div>
+      <div>
+        <div class="card">
+          <h4>How credits work</h4>
+          <ul class="hist" style="font-size:14.5px">
+            <li><span class="d plus">+1</span> per person who turns up</li>
+            <li><span class="d minus">−1</span> when you join someone else's</li>
+            <li><span class="d plus">+3</span> when you sign up, once</li>
+            <li style="border:0"><span class="d">0</span> money changes hands, ever</li>
+          </ul>
+          <p style="font-size:14px;color:#6d6a6a;line-height:1.6;margin:16px 0 0">Everyone pays for their own coffee. BlockWise never touches money.</p>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function vHosting(){
+  const mine = DB.outings.filter(o => o.host_id === ME && o.status === "past");
+  return `
+  <div class="sheet">
+    <p class="eyebrow">AFTER THE OUTING</p>
+    <h1 class="big">Who turned up?</h1>
+    <p class="sub">You earn 1 credit for each person who came. Mark everyone, then confirm.</p>
+    ${mine.map(o => {
+      const rs = DB.rsvps.filter(r => r.outing_id === o.id);
+      const p  = place(o.place_id);
+      const open = rs.filter(r => r.state === "rsvp");
+      const here = rs.filter(r => r.state === "attended").length
+                 + open.filter(r => staged[r.id] === "attended").length;
+      const away = rs.filter(r => r.state === "no_show").length
+                 + open.filter(r => staged[r.id] === "no_show").length;
+      const pending = open.filter(r => staged[r.id] === "attended").length;
+      const now = balance(ME);
+      const settled = open.length === 0;
+      return `<div class="card" style="max-width:960px">
+        <h4>${esc(p.name)} · ${esc(p.suburb)} · ${esc(o.starts_at)}</h4>
+        <ul class="roll">${rs.map(r => {
+          const u = user(r.user_id);
+          const done = r.state === "attended" || r.state === "no_show";
+          const mark = staged[r.id];
+          return `<li>
+            ${u.face ? `<img class="face" src="${u.face}" alt="" onerror="this.remove()">` : `<span class="face"></span>`}
+            <span><span class="who">@${esc(u.username)} <span class="tickmark">✓</span></span>
+            <span class="meta">${u.age_band} · ${u.gender}</span></span>
+            <span class="act">${done
+              ? `<span class="done">${r.state === "attended" ? "Confirmed here · +1 credit" : "Marked a no-show"}</span>`
+              : `<button class="pillbtn ${mark==="attended"?"on":""}" data-present="${r.id}">Was here</button>
+                 <button class="pillbtn off ${mark==="no_show"?"on":""}" data-absent="${r.id}">No-show</button>
+                 ${mark==="attended" ? `<span class="done">+1 credit</span>` : ""}
+                 ${mark==="no_show"  ? `<span class="done" style="color:#8a8686">no credit</span>` : ""}`}</span>
+          </li>`; }).join("")}</ul>
+      </div>
+
+      <div class="tally">
+        <span class="lbl">CREDITS THIS OUTING</span>
+        <span class="was">${now}</span>
+        <span class="arrow">→</span>
+        <span class="will">${now + pending}</span>
+        <span class="note">${here} confirmed · ${away} no-show${away === 1 ? "" : "s"}</span>
+      </div>
+
+      ${settled
+        ? `<p class="flagline" style="margin-top:26px">Attendance confirmed and locked</p>`
+        : `<button class="submit" style="margin-top:26px" data-confirm="${o.id}"
+             ${Object.keys(staged).length ? "" : "disabled"}>Confirm attendance</button>`}
+      <p class="sub" style="font-size:15px;margin-top:18px">Once you confirm, credits are added and attendance locks. This is the only signal the system has.</p>`;
+    }).join("") || `<div class="card" style="max-width:960px"><p style="margin:0">Nothing to mark. Switch to @wombatpost to see a past outing.</p></div>`}
+  </div>`;
+}
+
+function vAccount(){
+  const me = user(ME);
+  const mine = DB.rsvps.filter(r => r.user_id === ME && r.state !== "cancelled");
+  const soon = mine.map(r => outing(r.outing_id)).filter(o => o && o.status === "upcoming");
+  const hosting = DB.outings.filter(o => o.host_id === ME && o.status === "upcoming");
+  const past = mine.map(r => outing(r.outing_id)).filter(o => o && o.status === "past");
+  const rows = DB.txns.filter(t => t.user_id === ME).slice().reverse();
+  const card = o => { const p = place(o.place_id); return `
+    <button class="mini" data-go='{"name":"outing","id":"${o.id}"}' style="--fb:${PLATE[p.plate]};${tint(o.tags[0])}">
+      <div class="top">${p.img ? `<img src="${p.img}" alt="" onerror="this.remove()">` : ""}<span class="stripe"></span></div>
+      <div class="body"><h4>${esc(p.name)}</h4>
+        <div class="row"><span class="cat">#${esc(o.tags[0])}</span><span>${esc(p.suburb)}</span>
+        <span>${esc(o.starts_at)}</span></div></div>
+    </button>`; };
+  return `
+  <div class="sheet">
+    <div class="cols">
+      <div>
+        <p class="eyebrow">ONLY YOU SEE THIS PAGE</p>
+        <h1 class="big">@${esc(me.username)}</h1>
+        <p class="sub" style="margin-bottom:18px">${esc(me.bio)}</p>
+        <div class="picks" style="margin-bottom:34px">
+          <span class="pick plain" aria-pressed="true">${me.age_band} ✓</span>
+          <span class="pick plain" aria-pressed="true">${me.gender} ✓</span>
+          <span class="pick plain">${esc(me.city)}</span>
+        </div>
+        <h3 class="sec">Tags you follow</h3>
+        <div class="picks" style="margin-bottom:12px">${me.tags_followed.map(t => `<button class="pick" data-tag="${t}" style="${tint(t)}">#${t}</button>`).join("")}</div>
+        <p class="sub" style="font-size:14.5px">You follow tags, not people. There is no way to follow a person on BlockWise and no page that lists someone's outings.</p>
+
+        <hr class="rule">
+        <h3 class="sec">You are hosting</h3>
+        <div class="grid3">${hosting.map(card).join("") || `<p class="sub">Nothing yet. <a href="#" data-go='{"name":"create"}'>Host one</a>.</p>`}</div>
+
+        <hr class="rule">
+        <h3 class="sec">You are going to</h3>
+        <div class="grid3">${soon.map(card).join("") || `<p class="sub">Nothing booked.</p>`}</div>
+
+        ${past.length ? `<hr class="rule"><h3 class="sec">You went to</h3><div class="grid3">${past.map(card).join("")}</div>` : ""}
+      </div>
+
+      <div>
+        <div class="card">
+          <h4>Credits</h4>
+          <div style="font-family:var(--mono);font-size:64px;color:var(--olive);line-height:1;margin-bottom:8px">${balance(ME)}</div>
+          <p style="font-size:14px;color:#6d6a6a;margin:0 0 22px;line-height:1.55">Nobody else can see this. It is not a score, a level or a rank.</p>
+          <ul class="hist">${rows.map(t => `<li>
+            <span class="d ${t.delta > 0 ? "plus" : "minus"}">${t.delta > 0 ? "+" : ""}${t.delta}</span>
+            <span>${esc(t.reason)}</span><span class="when">${esc(t.created_at)}</span></li>`).join("")}</ul>
+        </div>
+        ${DB.outings.some(o => o.host_id === ME && o.status === "past")
+          ? `<button class="submit" style="margin-top:22px;width:100%" data-go='{"name":"hosting"}'>Mark who turned up</button>` : ""}
+        ${me.noshows ? `<p style="margin-top:22px"><span class="flagline">${me.noshows} of 3 no-shows</span></p>` : ""}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   SEARCH RESULTS — placeholder layout.
+   Replace the markup below with the design team's page.
+   `view.q` is the query. `matches(view.q)` gives {tags, places}.
+   ============================================================ */
+/* SEARCH RESULTS / EXPLORE — the filter strip lives here, not on the feed.
+   Reached by pressing enter in the search bar. */
+function vSearch(){
+  const list = feedList(view.q || "");
+  const suburbs = [...new Set(DB.places.map(p => p.suburb))].sort();
+  return `
+  <div class="filterbar"><div class="wrap">
+    <div>
+      <p class="ask">What do you want to do?</p>
+      <div class="fpill">${ICON.glass}
+        <input id="feedq" placeholder="Try matcha, a suburb, or a venue"
+          value="${esc(view.q || "")}" autocomplete="off"></div>
+    </div>
+    <div>
+      <div class="frow"><span class="lab">When?</span>
+        <div class="fpill">${ICON.cal}<input value="29/08/26" readonly></div></div>
+      <div class="frow"><span class="lab">Where?</span>
+        <div class="fpill">${ICON.pin}
+          <select id="feedwhere"><option value="">Anywhere in Sydney</option>
+          ${suburbs.map(s => `<option ${s===feedWhere?"selected":""}>${esc(s)}</option>`).join("")}</select></div></div>
+    </div>
+  </div></div>
+
+  <div class="sheet" style="padding-bottom:0">
+    <p class="count">Showing ${list.length} result${list.length===1?"":"s"}</p>
+  </div>
+
+  <div class="sheet">
+    <div class="results" id="results">${list.map(ocard).join("")
+      || `<p class="sub">Nothing matches. Try a suburb like Marrickville, or a tag like matchacafe.</p>`}</div>
+  </div>`;
+}
+
+function vInterests(){
+  const me = user(ME);
+  return `
+  <div class="sheet">
+    <p class="eyebrow">ONE TIME, AT SIGNUP</p>
+    <h1 class="big">Pick what interests you</h1>
+    <p class="sub">This seeds your feed on day one. You can change it any time from your own page.</p>
+    ${Object.values(CATS).map(c => `
+      <div style="margin-bottom:46px">
+        <div style="display:inline-block;background:${c.css};color:var(--char);font-family:var(--mono);
+          font-size:44px;border-radius:100px;padding:16px 44px;margin-bottom:24px">${c.label}</div>
+        <div class="picks">${c.tags.map(t => `<button class="pick" data-tag="${t}" style="${tint(t)}"
+          aria-pressed="${me.tags_followed.includes(t)}">#${t}</button>`).join("")}</div>
+      </div>`).join("")}
+    <button class="submit" data-go='{"name":"tag","tag":"matchacafe"}'>Start looking</button>
+  </div>`;
+}
+
+/* ---------- render ---------- */
+/* the bar stays pinned; it shrinks once you're past the ticker so the
+   credit count is on screen for the whole scroll */
+function syncBar(){
+  const b = document.querySelector(".bar");
+  if (b) b.classList.toggle("compact", window.scrollY > 40);
+}
+window.addEventListener("scroll", syncBar, { passive:true });
+
+function render(){
+  const body = view.name === "tag"       ? vTag()
+             : view.name === "outing"    ? vOuting()
+             : view.name === "place"     ? vPlace()
+             : view.name === "create"    ? vCreate()
+             : view.name === "hosting"   ? vHosting()
+             : view.name === "account"   ? vAccount()
+             : view.name === "search"    ? vSearch()
+             : view.name === "interests" ? vInterests() : vTag();
+  document.getElementById("app").innerHTML = masthead() + `<div class="wrap">${body}</div>` + footer();
+  syncBar();
+  if (searchOpen){
+    const i = document.getElementById("searchq");
+    if (i){ i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
+  }
+}
+
+/* ---------- one delegated listener ---------- */
+function repaintSugg(){
+  const s = document.getElementById("sugg");
+  if (s) s.innerHTML = suggest(searchQ);
+}
+function setQuery(q){
+  searchQ = q;
+  const i = document.getElementById("searchq");
+  if (i){ i.value = q; i.focus(); }
+  repaintSugg();
+}
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-go],[data-join],[data-tag],[data-user],[data-present],[data-absent],[data-confirm],[data-thread],[data-pick],[data-seed],#switch,#f-go,#searchbtn,#sclose,#swipe");
+  if (!t){
+    let dirty = false;
+    if (menuOpen){ menuOpen = false; dirty = true; }
+    if (searchOpen && !e.target.closest(".sheetdrop")){ searchOpen = false; dirty = true; }
+    if (dirty) render();
+    return;
+  }
+  e.preventDefault();
+
+  if (t.id === "searchbtn"){ searchOpen = !searchOpen; menuOpen = false; return render(); }
+  if (t.id === "sclose"){ searchOpen = false; searchQ = ""; return render(); }
+  if (t.id === "swipe")  return setQuery("");
+  if (t.dataset.seed)    return setQuery(t.dataset.seed);
+  if (t.id === "switch"){ menuOpen = !menuOpen; searchOpen = false; return render(); }
+  if (t.dataset.user){ ME = t.dataset.user; menuOpen = false; return render(); }
+  if (t.dataset.go)   return go(JSON.parse(t.dataset.go));
+  if (t.dataset.join) return join(t.dataset.join);
+  if (t.dataset.tag)  return go({ name:"tag", tag:t.dataset.tag });
+  if (t.dataset.present) return stage(t.dataset.present, "attended");
+  if (t.dataset.absent)  return stage(t.dataset.absent, "no_show");
+  if (t.dataset.confirm) return confirmAttendance(t.dataset.confirm);
+  if (t.dataset.thread){
+    threadOpen = threadOpen === t.dataset.thread ? null : t.dataset.thread;
+    return render();
+  }
+  if (t.dataset.pick){ t.setAttribute("aria-pressed", t.getAttribute("aria-pressed") !== "true"); return; }
+
+  if (t.id === "f-go"){
+    const tags = [...document.querySelectorAll('#f-tags [aria-pressed="true"]')].map(b => b.dataset.pick);
+    const ages = document.getElementById("f-age").value;
+    const o = {
+      id: nid("o"), host_id: ME,
+      day: +document.getElementById("f-day").value,
+      place_id: document.getElementById("f-place").value,
+      starts_at: document.getElementById("f-when").value || "Sat 15:30",
+      seats: +document.getElementById("f-seats").value,
+      status: "upcoming",
+      description: document.getElementById("f-desc").value || "Just turn up and see.",
+      tags: tags.length ? tags : ["coffee"],
+      restrict_gender: document.getElementById("f-gender").value || null,
+      restrict_age_bands: ages ? ages.split(",") : []
+    };
+    DB.outings.unshift(o);
+    go({ name:"tag", tag:o.tags[0] });
+    toast("Posted. It's live on #" + o.tags[0]);
+  }
+});
+
+/* typing updates only the suggestion list, so the caret never jumps */
+document.addEventListener("input", e => {
+  if (e.target.id === "searchq"){ searchQ = e.target.value; return repaintSugg(); }
+  if (e.target.id === "feedq"){
+    view.q = e.target.value;
+    const r = document.getElementById("results");
+    const list = feedList(view.q);
+    if (r) r.innerHTML = list.map(ocard).join("")
+      || `<p class="sub">Nothing matches. Clear the filters, or host one yourself.</p>`;
+    const c = document.querySelector(".count");
+    if (c) c.textContent = `Showing ${list.length} result${list.length===1?"":"s"}`;
+  }
+});
+document.addEventListener("change", e => {
+  if (e.target.id === "feedwhere"){ feedWhere = e.target.value; render(); }
+});
+/* feedQ is no longer used; the query lives on view.q for the results page */
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && searchOpen){ searchOpen = false; return render(); }
+  if (e.target.id === "searchq" && e.key === "Enter"){
+    const q = e.target.value.trim();
+    if (q) go({ name:"search", q });
+  }
+});
+
+render();
+</script>
+</body>
+</html>
